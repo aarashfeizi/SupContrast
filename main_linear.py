@@ -137,6 +137,7 @@ def train(train_loader, model, classifier, criterion, optimizer, epoch, opt):
     data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
+    top5 = AverageMeter()
 
     end = time.time()
     for idx, (images, labels) in enumerate(train_loader):
@@ -159,6 +160,7 @@ def train(train_loader, model, classifier, criterion, optimizer, epoch, opt):
         losses.update(loss.item(), bsz)
         acc1, acc5 = accuracy(output, labels, topk=(1, 5))
         top1.update(acc1[0], bsz)
+        top5.update(acc5[0], bsz)
 
         # SGD
         optimizer.zero_grad()
@@ -175,9 +177,10 @@ def train(train_loader, model, classifier, criterion, optimizer, epoch, opt):
                   'BT {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'DT {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'loss {loss.val:.3f} ({loss.avg:.3f})\t'
-                  'Acc@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
+                  'Acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
+                  'Acc@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                    epoch, idx + 1, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses, top1=top1))
+                   data_time=data_time, loss=losses, top1=top1, top5=top5))
             sys.stdout.flush()
 
     return losses.avg, top1.avg
