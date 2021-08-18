@@ -5,6 +5,72 @@ import numpy as np
 import torch
 import torch.optim as optim
 
+import torch
+from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.summary import hparams
+
+import pandas as pd
+import os
+from PIL import Image
+
+class SummaryWriter(SummaryWriter):
+    def add_hparams(self, hparam_dict, metric_dict, global_step):
+        torch._C._log_api_usage_once("tensorboard.logging.add_hparams")
+        if type(hparam_dict) is not dict or type(metric_dict) is not dict:
+            raise TypeError('hparam_dict and metric_dict should be dictionary.')
+        exp, ssi, sei = hparams(hparam_dict, metric_dict)
+
+        logdir = self._get_file_writer().get_logdir()
+
+        with SummaryWriter(log_dir=logdir) as w_hp:
+            w_hp.file_writer.add_summary(exp)
+            w_hp.file_writer.add_summary(ssi)
+            w_hp.file_writer.add_summary(sei)
+            for k, v in metric_dict.items():
+                w_hp.add_scalar(k, v, global_step=global_step)
+
+
+class BaseDataset(torch.utils.data.Dataset):
+    def __init__(self, root, mode, transform=None):
+        self.ys, self.im_paths, self.I = [], [], []
+
+        self.mode = mode
+        self.root = root + '/hotels50k/'
+        if mode == 'train':
+            self.config_file = pd.read_csv(root + '/hotels50k/v5_splits/train_small.csv')
+        elif self.mode == 'eval':
+            self.config_file = pd.read_csv(root + '/hotels50k/v5_splits/val1_small.csv')
+        self.transform = transform
+        print('getting classes')
+        self.classes = np.unique(self.config_file.label)
+        # if self.mode == 'train':
+        #     self.classes = range(0, 100)
+        # elif self.mode == 'eval':
+        #     self.classes = range(100, 200)
+
+        BaseDataset.__init__(self, self.root, self.mode, self.transform)
+        self.ys = list(self.config_file.label)
+        self.I = [i for i in range(len(self.ys))]
+        relative_im_paths = list(self.config_file.image)
+        self.im_paths = [os.path.join(self.root, i) for i in relative_im_paths]
+
+    def __len__(self):
+        return len(self.ys)
+
+    def __getitem__(self, index):
+        def img_load(index):
+            im = Image.open(self.im_paths[index])
+            # convert gray to rgb
+            if len(list(im.split())) == 1: im = im.convert('RGB')
+            if self.transform is not None:
+                im = self.transform(im)
+            return im
+
+        im = img_load(index)
+        target = self.ys[index]
+
+        return im, target
+
 
 class TwoCropTransform:
     """Create two crops of the same image"""

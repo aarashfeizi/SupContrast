@@ -6,7 +6,9 @@ import argparse
 import time
 import math
 
-import tensorboard_logger as tb_logger
+import util
+from util import SummaryWriter
+# import tensorboard_logger as tb_logger
 import torch
 import torch.backends.cudnn as cudnn
 from torchvision import transforms, datasets
@@ -85,6 +87,9 @@ def parse_option():
             and opt.mean is not None \
             and opt.std is not None
 
+    if opt.dataset == 'hotels':
+        assert opt.data_folder is not None
+
     # set the path according to the environment
     if opt.data_folder is None:
         opt.data_folder = './datasets/'
@@ -136,6 +141,9 @@ def set_loader(opt):
     elif opt.dataset == 'cifar100':
         mean = (0.5071, 0.4867, 0.4408)
         std = (0.2675, 0.2565, 0.2761)
+    elif opt.dataset == 'hotels':
+        mean = (0.5071, 0.4867, 0.4408)
+        std = (0.2675, 0.2565, 0.2761)
     elif opt.dataset == 'path':
         mean = eval(opt.mean)
         std = eval(opt.std)
@@ -162,6 +170,10 @@ def set_loader(opt):
         train_dataset = datasets.CIFAR100(root=opt.data_folder,
                                           transform=TwoCropTransform(train_transform),
                                           download=True)
+    elif opt.dataset == 'hotels':
+        train_dataset = util.BaseDataset(root=opt.data_folder,
+                                         mode='train',
+                                         transform=TwoCropTransform(train_transform))
     elif opt.dataset == 'path':
         train_dataset = datasets.ImageFolder(root=opt.data_folder,
                                             transform=TwoCropTransform(train_transform))
@@ -265,7 +277,8 @@ def main():
     optimizer = set_optimizer(opt, model)
 
     # tensorboard
-    logger = tb_logger.Logger(logdir=opt.tb_folder, flush_secs=2)
+    # logger = tb_logger.Logger(logdir=opt.tb_folder, flush_secs=2)
+    writer = SummaryWriter(opt.tb_folder)
 
     # training routine
     for epoch in range(1, opt.epochs + 1):
@@ -278,8 +291,10 @@ def main():
         print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 
         # tensorboard logger
-        logger.log_value('loss', loss, epoch)
-        logger.log_value('learning_rate', optimizer.param_groups[0]['lr'], epoch)
+        # writer.add_scalar('loss', loss, epoch)
+        writer.add_scalar('Train/Loss', loss, epoch)
+        writer.add_scalar('Train/Learning_rate', optimizer.param_groups[0]['lr'], epoch)
+        writer.flush()
 
         if epoch % opt.save_freq == 0:
             save_file = os.path.join(
