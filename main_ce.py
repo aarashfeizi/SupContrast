@@ -7,6 +7,7 @@ import time
 import math
 
 # import tensorboard_logger as tb_logger
+import util
 from util import SummaryWriter
 import torch
 import torch.backends.cudnn as cudnn
@@ -38,6 +39,7 @@ def parse_option():
     parser.add_argument('--epochs', type=int, default=500,
                         help='number of training epochs')
 
+
     # optimization
     parser.add_argument('--learning_rate', type=float, default=0.2,
                         help='learning rate')
@@ -53,7 +55,9 @@ def parse_option():
     # model dataset
     parser.add_argument('--model', type=str, default='resnet50')
     parser.add_argument('--dataset', type=str, default='cifar10',
-                        choices=['cifar10', 'cifar100'], help='dataset')
+                        choices=['cifar10', 'cifar100', 'hotels'], help='dataset')
+    parser.add_argument('--data_folder', type=str, default=None, help='path to custom dataset')
+
 
     # other setting
     parser.add_argument('--cosine', action='store_true',
@@ -68,7 +72,8 @@ def parse_option():
     opt = parser.parse_args()
 
     # set the path according to the environment
-    opt.data_folder = './datasets/'
+    if opt.data_folder is None:
+        opt.data_folder = './datasets/'
     opt.model_path = './save/SupCon/{}_models'.format(opt.dataset)
     opt.tb_path = './save/SupCon/{}_tensorboard'.format(opt.dataset)
 
@@ -124,6 +129,9 @@ def set_loader(opt):
     elif opt.dataset == 'cifar100':
         mean = (0.5071, 0.4867, 0.4408)
         std = (0.2675, 0.2565, 0.2761)
+    elif opt.dataset == 'hotels':
+        mean = (0.5071, 0.4867, 0.4408)
+        std = (0.2675, 0.2565, 0.2761)
     else:
         raise ValueError('dataset not supported: {}'.format(opt.dataset))
     normalize = transforms.Normalize(mean=mean, std=std)
@@ -154,6 +162,15 @@ def set_loader(opt):
         val_dataset = datasets.CIFAR100(root=opt.data_folder,
                                         train=False,
                                         transform=val_transform)
+    elif opt.dataset == 'hotels':
+        train_dataset = util.HotelDataset(root=opt.data_folder,
+                                         mode='train',
+                                         transform=train_transform)
+
+        val_dataset = util.HotelDataset(root=opt.data_folder,
+                                          mode='eval',
+                                          transform=train_transform)
+
     else:
         raise ValueError(opt.dataset)
 
@@ -292,7 +309,7 @@ def main():
     optimizer = set_optimizer(opt, model)
 
     # tensorboard
-    logger = tb_logger.Logger(logdir=opt.tb_folder, flush_secs=2)
+    # logger = tb_logger.Logger(logdir=opt.tb_folder, flush_secs=2)
     writer = SummaryWriter(opt.tb_folder)
 
     # training routine
