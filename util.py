@@ -37,9 +37,9 @@ class BaseDataset(torch.utils.data.Dataset):
         self.mode = mode
         self.root = root + '/hotels50k/'
         if mode == 'train':
-            self.config_file = pd.read_csv(root + '/hotels50k/v5_splits/train_small.csv')
+            self.config_file = pd.read_csv(root + 'v5_splits/train_small.csv')
         elif self.mode == 'eval':
-            self.config_file = pd.read_csv(root + '/hotels50k/v5_splits/val1_small.csv')
+            self.config_file = pd.read_csv(root + 'v5_splits/val1_small.csv')
         self.transform = transform
         print('getting classes')
         self.classes = np.unique(self.config_file.label)
