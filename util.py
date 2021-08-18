@@ -30,10 +30,9 @@ class SummaryWriter(SummaryWriter):
                 w_hp.add_scalar(k, v, global_step=global_step)
 
 
-class BaseDataset(torch.utils.data.Dataset):
+class HotelDataset(torch.utils.data.Dataset):
     def __init__(self, root, mode, transform=None):
         self.ys, self.im_paths, self.I = [], [], []
-
         self.mode = mode
         self.root = root + '/hotels50k/'
         if mode == 'train':
@@ -48,7 +47,6 @@ class BaseDataset(torch.utils.data.Dataset):
         # elif self.mode == 'eval':
         #     self.classes = range(100, 200)
 
-        BaseDataset.__init__(self, self.root, self.mode, self.transform)
         self.ys = list(self.config_file.label)
         self.I = [i for i in range(len(self.ys))]
         relative_im_paths = list(self.config_file.image)

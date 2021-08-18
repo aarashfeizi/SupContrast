@@ -171,7 +171,7 @@ def set_loader(opt):
                                           transform=TwoCropTransform(train_transform),
                                           download=True)
     elif opt.dataset == 'hotels':
-        train_dataset = util.BaseDataset(root=opt.data_folder,
+        train_dataset = util.HotelDataset(root=opt.data_folder,
                                          mode='train',
                                          transform=TwoCropTransform(train_transform))
     elif opt.dataset == 'path':
