@@ -97,7 +97,7 @@ def parse_option():
     elif opt.dataset == 'cifar100':
         opt.n_cls = 100
     elif opt.dataset == 'hotels':
-        opt.n_cls = 705
+        opt.n_cls = 2468
     else:
         raise ValueError('dataset not supported: {}'.format(opt.dataset))
 
@@ -144,7 +144,7 @@ def train(train_loader, model, classifier, criterion, optimizer, epoch, opt):
     top5 = AverageMeter()
 
     end = time.time()
-    for idx, (images, labels) in enumerate(train_loader):
+    for idx, (images, labels) in enumerate(train_loader): # todo
         data_time.update(time.time() - end)
 
         images = images.cuda(non_blocking=True)
