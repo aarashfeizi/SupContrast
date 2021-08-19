@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import math
+import pickle
+
 import numpy as np
 import torch
 import torch.optim as optim
@@ -35,6 +37,9 @@ class HotelDataset(torch.utils.data.Dataset):
         self.ys, self.im_paths, self.I = [], [], []
         self.mode = mode
         self.root = root + '/hotels50k/'
+        with open(self.root + 'v5_splits/train_lbl2id.pkl', 'rb') as f:
+            self.train_lbl2id = pickle.load(f)
+
         if mode == 'train':
             self.config_file = pd.read_csv(self.root + 'v5_splits/train_small.csv')
         elif self.mode == 'eval':
@@ -65,7 +70,10 @@ class HotelDataset(torch.utils.data.Dataset):
             return im
 
         im = img_load(index)
-        target = self.ys[index]
+        if self.train_lbl2id.get(self.ys[index]):
+            target = self.train_lbl2id.get(self.ys[index])
+        else:
+            target = self.ys[index]
 
         return im, target
 
