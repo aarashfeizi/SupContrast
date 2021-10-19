@@ -198,9 +198,6 @@ def set_model(opt):
         model = apex.parallel.convert_syncbn_model(model)
 
     if torch.cuda.is_available():
-        if opt.gpu_ids != '':
-            os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu_ids
-
         if torch.cuda.device_count() > 1:
             model.encoder = torch.nn.DataParallel(model.encoder)
         model = model.cuda()
@@ -271,6 +268,8 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
 def main():
     opt = parse_option()
 
+    if opt.gpu_ids != '':
+        os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu_ids
     # build data loader
     train_loader = set_loader(opt)
 
