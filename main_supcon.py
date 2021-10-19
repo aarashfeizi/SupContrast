@@ -200,6 +200,8 @@ def set_model(opt):
     if torch.cuda.is_available():
         if opt.gpu_ids != '':
             os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu_ids
+
+        if torch.cuda.device_count() > 1:
             model.encoder = torch.nn.DataParallel(model.encoder)
         model = model.cuda()
         criterion = criterion.cuda()
