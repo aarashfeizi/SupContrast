@@ -39,6 +39,7 @@ def parse_option():
                         help='num of workers to use')
     parser.add_argument('--epochs', type=int, default=1000,
                         help='number of training epochs')
+    parser.add_argument('-gpu', '--gpu_ids', default='', help="gpu ids used to train")  # before: default="0,1,2,3"
 
     # optimization
     parser.add_argument('--learning_rate', type=float, default=0.05,
@@ -197,7 +198,8 @@ def set_model(opt):
         model = apex.parallel.convert_syncbn_model(model)
 
     if torch.cuda.is_available():
-        if torch.cuda.device_count() > 1:
+        if opt.gpu_ids != '':
+            os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu_ids
             model.encoder = torch.nn.DataParallel(model.encoder)
         model = model.cuda()
         criterion = criterion.cuda()
