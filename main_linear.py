@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import os
 import sys
 import argparse
 import time
@@ -46,6 +47,8 @@ def parse_option():
                         help='weight decay')
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum')
+    parser.add_argument('-gpu', '--gpu_ids', default='', help="gpu ids used to train")  # before: default="0,1,2,3"
+
 
     # model dataset
     parser.add_argument('--model', type=str, default='resnet50')
@@ -234,7 +237,8 @@ def validate(val_loader, model, classifier, criterion, opt):
 def main():
     best_acc = 0
     opt = parse_option()
-
+    if opt.gpu_ids != '':
+        os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu_ids
     # build data loader
     train_loader, val_loader = set_loader(opt)
 
