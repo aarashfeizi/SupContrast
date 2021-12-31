@@ -15,6 +15,7 @@ from util import AverageMeter
 from util import adjust_learning_rate, warmup_learning_rate, accuracy
 from util import set_optimizer
 from util import save_h5
+from tqdm import tqdm
 from networks.resnet_big import SupConResNet, LinearClassifier
 
 try:
@@ -205,20 +206,21 @@ def get_embs(loader, model):
     all_lbls = numpy.zeros((total_num_imgs,), dtype=numpy.float32)
 
     with torch.no_grad():
-        for idx, (images, labels) in enumerate(loader):
-            images = images.float().cuda()
-            labels = labels.cuda()
-            bsz = labels.shape[0]
+        with tqdm(total=total_num_imgs, desc='Saving embs...') as t:
+            for idx, (images, labels) in enumerate(loader):
+                images = images.float().cuda()
+                labels = labels.cuda()
+                bsz = labels.shape[0]
 
-            # forward
-            embs = model.encoder(images)
+                # forward
+                embs = model.encoder(images)
 
-            begin_idx = idx * bsz
-            end_idx = min((idx + 1) * bsz, total_num_imgs)
+                begin_idx = idx * bsz
+                end_idx = min((idx + 1) * bsz, total_num_imgs)
 
-            all_embs[begin_idx: end_idx, :] = embs.cpu().detach().numpy()
-            all_lbls[begin_idx: end_idx] = labels.cpu().numpy()
-
+                all_embs[begin_idx: end_idx, :] = embs.cpu().detach().numpy()
+                all_lbls[begin_idx: end_idx] = labels.cpu().numpy()
+                t.update()
 
     return all_embs, all_lbls
 
