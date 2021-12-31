@@ -196,7 +196,7 @@ def train(train_loader, model, classifier, criterion, optimizer, epoch, opt):
 
     return losses.avg, top1.avg
 
-def get_embs(loader, model):
+def get_embs(loader, model, loader_type=''):
     """getting all embeddings"""
     model.eval()
 
@@ -206,7 +206,7 @@ def get_embs(loader, model):
     all_lbls = numpy.zeros((total_num_imgs,), dtype=numpy.float32)
 
     with torch.no_grad():
-        with tqdm(total=len(loader), desc='Saving embs...') as t:
+        with tqdm(total=len(loader), desc=f'Saving embs for {loader_type}...') as t:
             for idx, (images, labels) in enumerate(loader):
                 images = images.float().cuda()
                 labels = labels.cuda()
@@ -282,7 +282,7 @@ def main():
     optimizer = set_optimizer(opt, classifier)
 
     if opt.get_embeddings:
-        embs, lbls = get_embs(val_loader, model)
+        embs, lbls = get_embs(val_loader, model, opt.val_type)
         save_path = os.path.split(opt.ckpt)[0]
         save_h5('data', lbls, 'i8',
                 os.path.join(save_path, f'{opt.dataset}_{opt.val_type}_Classes.h5'))
