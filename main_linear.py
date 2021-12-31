@@ -206,7 +206,7 @@ def get_embs(loader, model):
     all_lbls = numpy.zeros((total_num_imgs,), dtype=numpy.float32)
 
     with torch.no_grad():
-        with tqdm(total=total_num_imgs, desc='Saving embs...') as t:
+        with tqdm(total=len(loader), desc='Saving embs...') as t:
             for idx, (images, labels) in enumerate(loader):
                 images = images.float().cuda()
                 labels = labels.cuda()
