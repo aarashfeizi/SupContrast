@@ -52,6 +52,7 @@ def parse_option():
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum')
     parser.add_argument('-gpu', '--gpu_ids', default='', help="gpu ids used to train")  # before: default="0,1,2,3"
+    parser.add_argument('--val_type', type=str, default='val1_small', help='val[1234][_small] for hotels50k')
 
 
     # model dataset
