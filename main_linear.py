@@ -285,9 +285,9 @@ def main():
         embs, lbls = get_embs(val_loader, model)
         save_path = os.path.split(opt.ckpt)[0]
         save_h5('data', lbls, 'i8',
-                os.path.join(save_path, f'{opt.dataset}_val1_Classes.h5'))
+                os.path.join(save_path, f'{opt.dataset}_{opt.val_type}_Classes.h5'))
         save_h5('data', embs, 'f',
-                os.path.join(save_path, f'{opt.dataset}_val1_Feats.h5'))
+                os.path.join(save_path, f'{opt.dataset}_{opt.val_type}_Feats.h5'))
     else:
         # training routine
         for epoch in range(1, opt.epochs + 1):

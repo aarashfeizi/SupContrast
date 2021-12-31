@@ -57,6 +57,7 @@ def parse_option():
     parser.add_argument('--dataset', type=str, default='cifar10',
                         choices=['cifar10', 'cifar100', 'hotels'], help='dataset')
     parser.add_argument('--data_folder', type=str, default=None, help='path to custom dataset')
+    parser.add_argument('--val_type', type=str, default='val1_small', help='val[1234][_small] for hotels50k')
 
 
     # other setting
@@ -169,7 +170,8 @@ def set_loader(opt):
 
         val_dataset = util.HotelDataset(root=opt.data_folder,
                                           mode='eval',
-                                          transform=train_transform)
+                                          transform=train_transform,
+                                          val_type=opt.val_type)
 
     else:
         raise ValueError(opt.dataset)
