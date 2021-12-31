@@ -28,7 +28,7 @@ except ImportError:
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
 
-    parser.add_argument('--get_embeddings', type=bool, action='store_true')
+    parser.add_argument('--get_embeddings', action='store_true')
     parser.add_argument('--print_freq', type=int, default=10,
                         help='print frequency')
     parser.add_argument('--save_freq', type=int, default=50,
