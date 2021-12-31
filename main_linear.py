@@ -6,6 +6,7 @@ import argparse
 import time
 import math
 
+import numpy
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -13,6 +14,7 @@ from main_ce import set_loader
 from util import AverageMeter
 from util import adjust_learning_rate, warmup_learning_rate, accuracy
 from util import set_optimizer
+from util import save_h5
 from networks.resnet_big import SupConResNet, LinearClassifier
 
 try:
@@ -202,6 +204,11 @@ def validate(val_loader, model, classifier, criterion, opt):
     losses = AverageMeter()
     top1 = AverageMeter()
 
+    total_num_imgs = val_loader.dataset.__len__()
+
+    all_embs = numpy.zeros((total_num_imgs, 2048), dtype=numpy.float32) # only for resnet50 and resnet101
+    all_lbls = numpy.zeros((total_num_imgs,), dtype=numpy.float32)
+
     with torch.no_grad():
         end = time.time()
         for idx, (images, labels) in enumerate(val_loader):
@@ -210,8 +217,15 @@ def validate(val_loader, model, classifier, criterion, opt):
             bsz = labels.shape[0]
 
             # forward
-            output = classifier(model.encoder(images))
+            embs = model.encoder(images)
+            output = classifier(embs)
             loss = criterion(output, labels)
+
+            begin_idx = idx * bsz
+            end_idx = min((idx + 1) * bsz, total_num_imgs)
+
+            all_embs[begin_idx: end_idx, :] = embs.cpu().detach().numpy()
+            all_lbls[begin_idx: end_idx] = labels.cpu().numpy()
 
             # update metric
             losses.update(loss.item(), bsz)
@@ -231,7 +245,7 @@ def validate(val_loader, model, classifier, criterion, opt):
                        loss=losses, top1=top1))
 
     print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
-    return losses.avg, top1.avg
+    return losses.avg, top1.avg, (all_embs, all_lbls)
 
 
 def main():
@@ -261,9 +275,15 @@ def main():
             epoch, time2 - time1, acc))
 
         # eval for one epoch
-        loss, val_acc = validate(val_loader, model, classifier, criterion, opt)
+        loss, val_acc, (embs, lbls) = validate(val_loader, model, classifier, criterion, opt)
         if val_acc > best_acc:
             best_acc = val_acc
+
+            save_path = os.path.split(opt.ckpt)[0]
+            save_h5('data', lbls, 'i8',
+                          os.path.join(save_path, f'{opt.dataset}_val1_Classes.h5'))
+            save_h5('data', embs, 'f',
+                          os.path.join(save_path, f'{opt.dataset}_val1_Feats.h5'))
 
     print('best accuracy: {:.2f}'.format(best_acc))
 

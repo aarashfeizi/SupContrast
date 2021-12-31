@@ -3,6 +3,7 @@ from __future__ import print_function
 import math
 import pickle
 
+import h5py
 import numpy as np
 import torch
 import torch.optim as optim
@@ -165,3 +166,9 @@ def save_model(model, optimizer, opt, epoch, save_file):
     }
     torch.save(state, save_file)
     del state
+
+def save_h5(data_description, data, data_type, path):
+    h5_feats = h5py.File(path, 'w')
+    h5_feats.create_dataset(data_description, data=data, dtype=data_type)
+    h5_feats.close()
+
