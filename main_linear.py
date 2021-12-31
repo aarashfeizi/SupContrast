@@ -27,6 +27,7 @@ except ImportError:
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
 
+    parser.add_argument('--get_embeddings', type=bool, action='store_true')
     parser.add_argument('--print_freq', type=int, default=10,
                         help='print frequency')
     parser.add_argument('--save_freq', type=int, default=50,
@@ -194,6 +195,33 @@ def train(train_loader, model, classifier, criterion, optimizer, epoch, opt):
 
     return losses.avg, top1.avg
 
+def get_embs(loader, model):
+    """getting all embeddings"""
+    model.eval()
+
+    total_num_imgs = loader.dataset.__len__()
+
+    all_embs = numpy.zeros((total_num_imgs, 2048), dtype=numpy.float32)  # only for resnet50 and resnet101
+    all_lbls = numpy.zeros((total_num_imgs,), dtype=numpy.float32)
+
+    with torch.no_grad():
+        for idx, (images, labels) in enumerate(loader):
+            images = images.float().cuda()
+            labels = labels.cuda()
+            bsz = labels.shape[0]
+
+            # forward
+            embs = model.encoder(images)
+
+            begin_idx = idx * bsz
+            end_idx = min((idx + 1) * bsz, total_num_imgs)
+
+            all_embs[begin_idx: end_idx, :] = embs.cpu().detach().numpy()
+            all_lbls[begin_idx: end_idx] = labels.cpu().numpy()
+
+
+    return all_embs, all_lbls
+
 
 def validate(val_loader, model, classifier, criterion, opt):
     """validation"""
@@ -203,11 +231,6 @@ def validate(val_loader, model, classifier, criterion, opt):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
-
-    total_num_imgs = val_loader.dataset.__len__()
-
-    all_embs = numpy.zeros((total_num_imgs, 2048), dtype=numpy.float32) # only for resnet50 and resnet101
-    all_lbls = numpy.zeros((total_num_imgs,), dtype=numpy.float32)
 
     with torch.no_grad():
         end = time.time()
@@ -220,12 +243,6 @@ def validate(val_loader, model, classifier, criterion, opt):
             embs = model.encoder(images)
             output = classifier(embs)
             loss = criterion(output, labels)
-
-            begin_idx = idx * bsz
-            end_idx = min((idx + 1) * bsz, total_num_imgs)
-
-            all_embs[begin_idx: end_idx, :] = embs.cpu().detach().numpy()
-            all_lbls[begin_idx: end_idx] = labels.cpu().numpy()
 
             # update metric
             losses.update(loss.item(), bsz)
@@ -245,7 +262,7 @@ def validate(val_loader, model, classifier, criterion, opt):
                        loss=losses, top1=top1))
 
     print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
-    return losses.avg, top1.avg, (all_embs, all_lbls)
+    return losses.avg, top1.avg
 
 
 def main():
@@ -262,30 +279,32 @@ def main():
     # build optimizer
     optimizer = set_optimizer(opt, classifier)
 
-    # training routine
-    for epoch in range(1, opt.epochs + 1):
-        adjust_learning_rate(opt, optimizer, epoch)
+    if opt.get_embeddings:
+        embs, lbls = get_embs(val_loader, model)
+        save_path = os.path.split(opt.ckpt)[0]
+        save_h5('data', lbls, 'i8',
+                os.path.join(save_path, f'{opt.dataset}_val1_Classes.h5'))
+        save_h5('data', embs, 'f',
+                os.path.join(save_path, f'{opt.dataset}_val1_Feats.h5'))
+    else:
+        # training routine
+        for epoch in range(1, opt.epochs + 1):
+            adjust_learning_rate(opt, optimizer, epoch)
 
-        # train for one epoch
-        time1 = time.time()
-        loss, acc = train(train_loader, model, classifier, criterion,
-                          optimizer, epoch, opt)
-        time2 = time.time()
-        print('Train epoch {}, total time {:.2f}, accuracy:{:.2f}'.format(
-            epoch, time2 - time1, acc))
+            # train for one epoch
+            time1 = time.time()
+            loss, acc = train(train_loader, model, classifier, criterion,
+                              optimizer, epoch, opt)
+            time2 = time.time()
+            print('Train epoch {}, total time {:.2f}, accuracy:{:.2f}'.format(
+                epoch, time2 - time1, acc))
 
-        # eval for one epoch
-        loss, val_acc, (embs, lbls) = validate(val_loader, model, classifier, criterion, opt)
-        if val_acc > best_acc:
-            best_acc = val_acc
+            # eval for one epoch
+            loss, val_acc = validate(val_loader, model, classifier, criterion, opt)
+            if val_acc > best_acc:
+                best_acc = val_acc
 
-            save_path = os.path.split(opt.ckpt)[0]
-            save_h5('data', lbls, 'i8',
-                          os.path.join(save_path, f'{opt.dataset}_val1_Classes.h5'))
-            save_h5('data', embs, 'f',
-                          os.path.join(save_path, f'{opt.dataset}_val1_Feats.h5'))
-
-    print('best accuracy: {:.2f}'.format(best_acc))
+        print('best accuracy: {:.2f}'.format(best_acc))
 
 
 if __name__ == '__main__':
