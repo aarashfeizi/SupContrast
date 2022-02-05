@@ -1,22 +1,22 @@
 from __future__ import print_function
 
+import argparse
+import math
 import os
 import sys
-import argparse
 import time
-import math
 
-# import tensorboard_logger as tb_logger
-import util
-from util import SummaryWriter
 import torch
 import torch.backends.cudnn as cudnn
 from torchvision import transforms, datasets
 
+# import tensorboard_logger as tb_logger
+import util
+from networks.resnet_big import SupCEResNet
 from util import AverageMeter
+from util import SummaryWriter
 from util import adjust_learning_rate, warmup_learning_rate, accuracy
 from util import set_optimizer, save_model
-from networks.resnet_big import SupCEResNet
 
 try:
     import apex
@@ -39,7 +39,6 @@ def parse_option():
     parser.add_argument('--epochs', type=int, default=500,
                         help='number of training epochs')
 
-
     # optimization
     parser.add_argument('--learning_rate', type=float, default=0.2,
                         help='learning rate')
@@ -56,9 +55,10 @@ def parse_option():
     parser.add_argument('--model', type=str, default='resnet50')
     parser.add_argument('--dataset', type=str, default='cifar10',
                         choices=['cifar10', 'cifar100', 'hotels'], help='dataset')
+    parser.add_argument('--small', action='store_true',
+                        help='use small or large hotels')
     parser.add_argument('--data_folder', type=str, default=None, help='path to custom dataset')
-    parser.add_argument('--val_type', type=str, default='val1_small', help='val[1234][_small] for hotels50k')
-
+    parser.add_argument('--val_type', type=str, default='val1', help='val[1234] for hotels50k')
 
     # other setting
     parser.add_argument('--cosine', action='store_true',
@@ -72,19 +72,23 @@ def parse_option():
 
     opt = parser.parse_args()
 
+    if opt.dataset == 'hotels' and opt.small:
+        small_string = '_small'
+    else:
+        small_string = ''
     # set the path according to the environment
     if opt.data_folder is None:
         opt.data_folder = './datasets/'
-    opt.model_path = './save/SupCon/{}_models'.format(opt.dataset)
-    opt.tb_path = './save/SupCon/{}_tensorboard'.format(opt.dataset)
+    opt.model_path = f'./save/SupCon/{opt.dataset}{small_string}_models'
+    opt.tb_path = f'./save/SupCon/{opt.dataset}{small_string}_tensorboard'
 
     iterations = opt.lr_decay_epochs.split(',')
     opt.lr_decay_epochs = list([])
     for it in iterations:
         opt.lr_decay_epochs.append(int(it))
 
-    opt.model_name = 'SupCE_{}_{}_lr_{}_decay_{}_bsz_{}_trial_{}'.\
-        format(opt.dataset, opt.model, opt.learning_rate, opt.weight_decay,
+    opt.model_name = 'SupCE_{}{}_{}_lr_{}_decay_{}_bsz_{}_trial_{}'. \
+        format(opt.dataset, small_string, opt.model, opt.learning_rate, opt.weight_decay,
                opt.batch_size, opt.trial)
 
     if opt.cosine:
@@ -131,8 +135,8 @@ def set_loader(opt):
         mean = (0.5071, 0.4867, 0.4408)
         std = (0.2675, 0.2565, 0.2761)
     elif opt.dataset == 'hotels':
-        mean = (0.5071, 0.4867, 0.4408)
-        std = (0.2675, 0.2565, 0.2761)
+        mean = (0.5805, 0.5247, 0.4683)
+        std = (0.2508, 0.2580, 0.2701)
     else:
         raise ValueError('dataset not supported: {}'.format(opt.dataset))
     normalize = transforms.Normalize(mean=mean, std=std)
@@ -165,13 +169,15 @@ def set_loader(opt):
                                         transform=val_transform)
     elif opt.dataset == 'hotels':
         train_dataset = util.HotelDataset(root=opt.data_folder,
-                                         mode='train',
-                                         transform=train_transform)
+                                          mode='train',
+                                          transform=train_transform,
+                                          small=opt.small)
 
         val_dataset = util.HotelDataset(root=opt.data_folder,
-                                          mode='eval',
-                                          transform=train_transform,
-                                          val_type=opt.val_type)
+                                        mode='eval',
+                                        transform=train_transform,
+                                        val_type=opt.val_type,
+                                        small=opt.small)
 
     else:
         raise ValueError(opt.dataset)
@@ -250,8 +256,8 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
                   'DT {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'loss {loss.val:.3f} ({loss.avg:.3f})\t'
                   'Acc@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
-                   epoch, idx + 1, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses, top1=top1))
+                epoch, idx + 1, len(train_loader), batch_time=batch_time,
+                data_time=data_time, loss=losses, top1=top1))
             sys.stdout.flush()
 
     return losses.avg, top1.avg
@@ -290,8 +296,8 @@ def validate(val_loader, model, criterion, opt):
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                       'Acc@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
-                       idx, len(val_loader), batch_time=batch_time,
-                       loss=losses, top1=top1))
+                    idx, len(val_loader), batch_time=batch_time,
+                    loss=losses, top1=top1))
 
     print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
     return losses.avg, top1.avg

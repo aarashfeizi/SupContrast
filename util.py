@@ -34,17 +34,18 @@ class SummaryWriter(SummaryWriter):
 
 
 class HotelDataset(torch.utils.data.Dataset):
-    def __init__(self, root, mode, transform=None, val_type='val1_small'):
+    def __init__(self, root, mode, transform=None, val_type='val1', small=True):
         self.ys, self.im_paths, self.I = [], [], []
         self.mode = mode
         self.root = root + '/hotels50k/'
+        self.small = '_small' if small else ''
         with open(self.root + 'v5_splits/train_lbl2id.pkl', 'rb') as f:
             self.train_lbl2id = pickle.load(f)
 
         if mode == 'train':
-            self.config_file = pd.read_csv(self.root + 'v5_splits/train_small.csv')
+            self.config_file = pd.read_csv(self.root + f'v5_splits/train{self.small}.csv')
         elif self.mode == 'eval':
-            self.config_file = pd.read_csv(self.root + f'v5_splits/{val_type}.csv')
+            self.config_file = pd.read_csv(self.root + f'v5_splits/{val_type}{self.small}.csv')
         self.transform = transform
         print('getting classes')
         self.classes = np.unique(self.config_file.label)

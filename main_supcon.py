@@ -57,6 +57,8 @@ def parse_option():
     parser.add_argument('--model', type=str, default='resnet50')
     parser.add_argument('--dataset', type=str, default='cifar10',
                         choices=['cifar10', 'cifar100', 'path', 'hotels'], help='dataset')
+    parser.add_argument('--small', action='store_true',
+                        help='use small or large hotels')
     parser.add_argument('--mean', type=str, help='mean of dataset in path in form of str tuple')
     parser.add_argument('--std', type=str, help='std of dataset in path in form of str tuple')
     parser.add_argument('--data_folder', type=str, default=None, help='path to custom dataset')
@@ -82,6 +84,11 @@ def parse_option():
 
     opt = parser.parse_args()
 
+    if opt.dataset == 'hotels' and opt.small:
+        small_string = '_small'
+    else:
+        small_string = ''
+
     # check if dataset is path that passed required arguments
     if opt.dataset == 'path':
         assert opt.data_folder is not None \
@@ -102,8 +109,8 @@ def parse_option():
     for it in iterations:
         opt.lr_decay_epochs.append(int(it))
 
-    opt.model_name = '{}ep_{}_{}_{}_lr_{}_decay_{}_bsz_{}_temp_{}_trial_{}'.\
-        format(opt.epochs, opt.method, opt.dataset, opt.model, opt.learning_rate,
+    opt.model_name = '{}ep_{}_{}{}_{}_lr_{}_decay_{}_bsz_{}_temp_{}_trial_{}'.\
+        format(opt.epochs, opt.method, opt.dataset, small_string, opt.model, opt.learning_rate,
                opt.weight_decay, opt.batch_size, opt.temp, opt.trial)
 
     if opt.cosine:
@@ -143,8 +150,8 @@ def set_loader(opt):
         mean = (0.5071, 0.4867, 0.4408)
         std = (0.2675, 0.2565, 0.2761)
     elif opt.dataset == 'hotels':
-        mean = (0.5071, 0.4867, 0.4408)
-        std = (0.2675, 0.2565, 0.2761)
+        mean = (0.5805, 0.5247, 0.4683)
+        std = (0.2508, 0.2580, 0.2701)
     elif opt.dataset == 'path':
         mean = eval(opt.mean)
         std = eval(opt.std)
@@ -174,7 +181,8 @@ def set_loader(opt):
     elif opt.dataset == 'hotels':
         train_dataset = util.HotelDataset(root=opt.data_folder,
                                          mode='train',
-                                         transform=TwoCropTransform(train_transform))
+                                         transform=TwoCropTransform(train_transform),
+                                          small=opt.small)
     elif opt.dataset == 'path':
         train_dataset = datasets.ImageFolder(root=opt.data_folder,
                                             transform=TwoCropTransform(train_transform))
