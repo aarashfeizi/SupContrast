@@ -59,6 +59,8 @@ def parse_option():
     parser.add_argument('--model', type=str, default='resnet50')
     parser.add_argument('--dataset', type=str, default='cifar10',
                         choices=['cifar10', 'cifar100', 'hotels'], help='dataset')
+    parser.add_argument('--small', action='store_true',
+                        help='use small version of hotels')
     parser.add_argument('--data_folder', type=str, default=None, help='path to custom dataset')
 
     # other setting
