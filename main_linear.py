@@ -52,7 +52,7 @@ def parse_option():
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum')
     parser.add_argument('-gpu', '--gpu_ids', default='', help="gpu ids used to train")  # before: default="0,1,2,3"
-    parser.add_argument('--val_type', type=str, default='val1_small', help='val[1234][_small] for hotels50k')
+    parser.add_argument('--val_type', type=str, default='val1', help='val[1234] for hotels50k')
 
 
     # model dataset
@@ -283,14 +283,18 @@ def main():
 
     # build optimizer
     optimizer = set_optimizer(opt, classifier)
+    if opt.dataset == 'hotels' and opt.small:
+        small_string = '_small'
+    else:
+        small_string = ''
 
     if opt.get_embeddings:
         embs, lbls = get_embs(val_loader, model, opt.val_type)
         save_path = os.path.split(opt.ckpt)[0]
         save_h5('data', lbls, 'i8',
-                os.path.join(save_path, f'{opt.dataset}_{opt.val_type}_Classes.h5'))
+                os.path.join(save_path, f'{opt.dataset}{small_string}_{opt.val_type}_Classes.h5'))
         save_h5('data', embs, 'f',
-                os.path.join(save_path, f'{opt.dataset}_{opt.val_type}_Feats.h5'))
+                os.path.join(save_path, f'{opt.dataset}{small_string}_{opt.val_type}_Feats.h5'))
     else:
         # training routine
         for epoch in range(1, opt.epochs + 1):
